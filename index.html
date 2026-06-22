@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0d">
+<title>Task Voice</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+  :root {
+    --bg: #0b0b0d;
+    --surface: #16161a;
+    --text: #f2f2f2;
+    --muted: #8a8a93;
+    --accent: #4f8cff;
+    --recording: #ff4f4f;
+    --paused: #ffb84f;
+    --error: #ff4f4f;
+    --success: #3ddc84;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overscroll-behavior: none;
+    user-select: none;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 24px;
+    text-align: center;
+  }
+
+  h1 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+    margin: 0 0 48px;
+    text-transform: uppercase;
+  }
+
+  #recordBtn {
+    width: min(60vw, 240px);
+    height: min(60vw, 240px);
+    border-radius: 50%;
+    border: none;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 16px;
+    cursor: pointer;
+    box-shadow: 0 0 0 6px rgba(255,255,255,0.04);
+    transition: transform 0.12s ease, background 0.2s ease, box-shadow 0.2s ease;
+    touch-action: manipulation;
+  }
+
+  #recordBtn:active {
+    transform: scale(0.97);
+  }
+
+  #recordBtn.recording {
+    background: var(--recording);
+    box-shadow: 0 0 0 14px rgba(255,79,79,0.15);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  #recordBtn.paused {
+    background: var(--paused);
+    box-shadow: 0 0 0 14px rgba(255,184,79,0.15);
+    animation: none;
+  }
+
+  #recordBtn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 14px rgba(255,79,79,0.15); }
+    50% { box-shadow: 0 0 0 22px rgba(255,79,79,0.08); }
+  }
+
+  #secondaryControls {
+    display: none;
+    gap: 16px;
+    margin-top: 24px;
+  }
+
+  #secondaryControls.visible {
+    display: flex;
+  }
+
+  #secondaryControls button {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid rgba(255,255,255,0.12);
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  #deleteBtn {
+    border-color: rgba(255,79,79,0.4) !important;
+    color: var(--error);
+  }
+
+  #status {
+    margin-top: 36px;
+    font-size: 16px;
+    font-weight: 500;
+    min-height: 24px;
+  }
+
+  #status.ready { color: var(--muted); }
+  #status.recording { color: var(--recording); }
+  #status.paused { color: var(--paused); }
+  #status.sending { color: var(--accent); }
+  #status.done { color: var(--success); }
+  #status.error { color: var(--error); }
+  #status.offline { color: var(--error); }
+
+  #retryBtn {
+    margin-top: 16px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--error);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    display: none;
+  }
+
+  #retryBtn.visible {
+    display: inline-block;
+  }
+
+  #lastSubmit {
+    position: fixed;
+    bottom: 16px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    opacity: 0.7;
+  }
+
+  #unsupported {
+    display: none;
+    max-width: 320px;
+    color: var(--error);
+    font-size: 14px;
+    line-height: 1.5;
+    margin-top: 24px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Task Voice</h1>
+
+  <button id="recordBtn" type="button">Tap to Record</button>
+
+  <div id="secondaryControls">
+    <button id="pauseBtn" type="button">⏸ Pause</button>
+    <button id="deleteBtn" type="button">🗑 Restart</button>
+  </div>
+
+  <div id="status" class="ready">Ready</div>
+  <button id="retryBtn" type="button">Retry</button>
+
+  <div id="unsupported"></div>
+
+  <div id="lastSubmit"></div>
+
+<script>
+// =========================================================
+// CONFIGURATION - EDIT THESE TWO VALUES BEFORE DEPLOYING
+// =========================================================
+const N8N_WEBHOOK_URL = "https://n8n.srv1322057.hstgr.cloud/webhook/80acff81-4ad5-478b-8323-095bc9029d86"; // Replace this with your actual value
+const SECRET_TOKEN = "DavidVoiceMessageApp"; // Replace this with your actual value
+// =========================================================
+
+const recordBtn = document.getElementById('recordBtn');
+const secondaryControls = document.getElementById('secondaryControls');
+const pauseBtn = document.getElementById('pauseBtn');
+const deleteBtn = document.getElementById('deleteBtn');
+const statusEl = document.getElementById('status');
+const retryBtn = document.getElementById('retryBtn');
+const lastSubmitEl = document.getElementById('lastSubmit');
+const unsupportedEl = document.getElementById('unsupported');
+
+let mediaRecorder = null;
+let audioChunks = [];
+let mimeType = '';
+let lastBlob = null;
+let stream = null;
+let pendingDiscard = false;
+
+// recordingState: 'idle' | 'recording' | 'paused'
+let recordingState = 'idle';
+
+const LAST_SUBMIT_KEY = 'taskvoice_last_submit';
+
+function setStatus(text, cls) {
+  statusEl.textContent = text;
+  statusEl.className = cls;
+}
+
+function pickMimeType() {
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4;codecs=mp4a.40.2',
+    'audio/mp4',
+    'audio/ogg;codecs=opus'
+  ];
+  for (const type of candidates) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(type)) {
+      return type;
+    }
+  }
+  return '';
+}
+
+function checkSupport() {
+  const hasMediaDevices = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  const hasMediaRecorder = !!window.MediaRecorder;
+
+  if (!hasMediaDevices || !hasMediaRecorder) {
+    recordBtn.classList.add('disabled');
+    recordBtn.disabled = true;
+    setStatus('Error', 'error');
+    unsupportedEl.style.display = 'block';
+    unsupportedEl.textContent = 'Your browser does not support audio recording (MediaRecorder API unavailable). Please open this page in an up-to-date Android Chrome browser.';
+    return false;
+  }
+  return true;
+}
+
+function loadLastSubmit() {
+  const stored = localStorage.getItem(LAST_SUBMIT_KEY);
+  if (stored) {
+    lastSubmitEl.textContent = 'Last submission: ' + stored;
+  }
+}
+
+function saveLastSubmit() {
+  const now = new Date();
+  const formatted = now.toLocaleString();
+  localStorage.setItem(LAST_SUBMIT_KEY, formatted);
+  lastSubmitEl.textContent = 'Last submission: ' + formatted;
+}
+
+function updateControlsForState() {
+  recordBtn.classList.remove('recording', 'paused');
+
+  if (recordingState === 'idle') {
+    recordBtn.textContent = 'Tap to Record';
+    secondaryControls.classList.remove('visible');
+    pauseBtn.textContent = '⏸ Pause';
+  } else if (recordingState === 'recording') {
+    recordBtn.textContent = 'Tap to Stop & Send';
+    recordBtn.classList.add('recording');
+    secondaryControls.classList.add('visible');
+    pauseBtn.textContent = '⏸ Pause';
+    setStatus('Recording', 'recording');
+  } else if (recordingState === 'paused') {
+    recordBtn.textContent = 'Tap to Stop & Send';
+    recordBtn.classList.add('paused');
+    secondaryControls.classList.add('visible');
+    pauseBtn.textContent = '▶ Resume';
+    setStatus('Paused', 'paused');
+  }
+}
+
+async function startRecording() {
+  if (recordingState !== 'idle') return;
+  if (!navigator.onLine) {
+    setStatus('You are offline', 'offline');
+    return;
+  }
+
+  retryBtn.classList.remove('visible');
+  audioChunks = [];
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (err) {
+    setStatus('Error', 'error');
+    unsupportedEl.style.display = 'block';
+    unsupportedEl.textContent = 'Microphone access was denied or unavailable. Please allow microphone permission and try again.';
+    return;
+  }
+
+  mimeType = pickMimeType();
+  const options = mimeType ? { mimeType } : undefined;
+
+  try {
+    mediaRecorder = new MediaRecorder(stream, options);
+  } catch (err) {
+    mediaRecorder = new MediaRecorder(stream);
+    mimeType = mediaRecorder.mimeType || '';
+  }
+
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) {
+      audioChunks.push(e.data);
+    }
+  };
+
+  mediaRecorder.onstop = () => {
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+      stream = null;
+    }
+    recordingState = 'idle';
+    updateControlsForState();
+
+    if (pendingDiscard) {
+      pendingDiscard = false;
+      startRecording();
+      return;
+    }
+
+    const blob = new Blob(audioChunks, { type: mimeType || 'audio/webm' });
+    lastBlob = blob;
+    sendRecording(blob);
+  };
+
+  mediaRecorder.start();
+  recordingState = 'recording';
+  updateControlsForState();
+}
+
+function stopAndSend() {
+  if (recordingState === 'idle' || !mediaRecorder) return;
+  pendingDiscard = false;
+  if (mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+}
+
+function togglePause() {
+  if (!mediaRecorder) return;
+  if (recordingState === 'recording' && mediaRecorder.state === 'recording') {
+    mediaRecorder.pause();
+    recordingState = 'paused';
+    updateControlsForState();
+  } else if (recordingState === 'paused' && mediaRecorder.state === 'paused') {
+    mediaRecorder.resume();
+    recordingState = 'recording';
+    updateControlsForState();
+  }
+}
+
+function discardAndRestart() {
+  if (recordingState === 'idle' || !mediaRecorder) return;
+  pendingDiscard = true;
+  audioChunks = [];
+  if (mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+}
+
+async function sendRecording(blob) {
+  if (!navigator.onLine) {
+    setStatus('You are offline', 'offline');
+    retryBtn.classList.add('visible');
+    return;
+  }
+
+  setStatus('Sending', 'sending');
+  retryBtn.classList.remove('visible');
+
+  const extension = (mimeType && mimeType.includes('mp4')) ? 'mp4' : 'webm';
+  const filename = `recording-${Date.now()}.${extension}`;
+
+  const formData = new FormData();
+  formData.append('audio', blob, filename);
+
+  try {
+    const response = await fetch(N8N_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'X-Secret-Token': SECRET_TOKEN
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error('Webhook responded with status ' + response.status);
+    }
+
+    setStatus('Done', 'done');
+    saveLastSubmit();
+  } catch (err) {
+    setStatus('Error', 'error');
+    retryBtn.classList.add('visible');
+  }
+}
+
+retryBtn.addEventListener('click', () => {
+  if (lastBlob) {
+    sendRecording(lastBlob);
+  }
+});
+
+// Tap to toggle: first tap starts recording, second tap stops and sends.
+recordBtn.addEventListener('click', () => {
+  if (recordBtn.disabled) return;
+  if (recordingState === 'idle') {
+    startRecording();
+  } else {
+    stopAndSend();
+  }
+});
+
+pauseBtn.addEventListener('click', togglePause);
+deleteBtn.addEventListener('click', discardAndRestart);
+
+window.addEventListener('offline', () => {
+  if (recordingState === 'idle') {
+    setStatus('You are offline', 'offline');
+  }
+});
+
+window.addEventListener('online', () => {
+  if (statusEl.classList.contains('offline')) {
+    setStatus('Ready', 'ready');
+  }
+});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+checkSupport();
+loadLastSubmit();
+if (!navigator.onLine) {
+  setStatus('You are offline', 'offline');
+}
+</script>
+</body>
+</html>
