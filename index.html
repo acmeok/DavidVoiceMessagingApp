@@ -176,11 +176,130 @@
     line-height: 1.5;
     margin-top: 24px;
   }
+
+  #senderIndicator {
+    font-size: 13px;
+    color: var(--muted);
+    margin: -28px 0 32px;
+    min-height: 18px;
+  }
+
+  #senderIndicator strong {
+    color: var(--text);
+  }
+
+  #changeUserBtn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 13px;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 4px;
+  }
+
+  #userPickerOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 100;
+  }
+
+  #userPickerOverlay.visible {
+    display: flex;
+  }
+
+  #userPickerCard {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 28px 24px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+  }
+
+  #userPickerCard h2 {
+    font-size: 16px;
+    margin: 0 0 8px;
+  }
+
+  #userPickerCard p {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 20px;
+  }
+
+  #userSelect {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    margin-bottom: 16px;
+  }
+
+  #userPickerConfirm {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  #userPickerConfirm:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  #userPickerError {
+    color: var(--error);
+    font-size: 13px;
+    margin-top: 12px;
+    display: none;
+  }
+
+  #userPickerRetry {
+    margin-top: 10px;
+    background: none;
+    border: 1px solid var(--error);
+    color: var(--error);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    display: none;
+  }
 </style>
 </head>
 <body>
 
   <h1>Task Voice</h1>
+
+  <div id="senderIndicator"></div>
+
+  <div id="userPickerOverlay">
+    <div id="userPickerCard">
+      <h2>Who are you?</h2>
+      <p>Pick your name so tasks can show who sent them. You won't be asked again on this device.</p>
+      <select id="userSelect" disabled>
+        <option value="">Loading team list...</option>
+      </select>
+      <button id="userPickerConfirm" type="button" disabled>Continue</button>
+      <div id="userPickerError">Couldn't load the team list. Check your connection and try again.</div>
+      <button id="userPickerRetry" type="button">Retry</button>
+    </div>
+  </div>
 
   <button id="recordBtn" type="button">Tap to Record</button>
 
@@ -202,7 +321,133 @@
 // =========================================================
 const N8N_WEBHOOK_URL = "https://acmeconstruction.app.n8n.cloud/webhook/80acff81-4ad5-478b-8323-095bc9029d86"; // Replace this with your actual value
 const SECRET_TOKEN = "DavidVoiceMessageApp"; // Replace this with your actual value
+const TEAM_ROSTER_URL = "https://acmeconstruction.app.n8n.cloud/webhook/team-roster"; // Replace this with your actual value
 // =========================================================
+
+const senderIndicatorEl = document.getElementById('senderIndicator');
+const userPickerOverlay = document.getElementById('userPickerOverlay');
+const userSelect = document.getElementById('userSelect');
+const userPickerConfirm = document.getElementById('userPickerConfirm');
+const userPickerError = document.getElementById('userPickerError');
+const userPickerRetry = document.getElementById('userPickerRetry');
+
+const SENDER_KEY = 'taskvoice_sender';
+let currentSender = null; // { name, email }
+let roster = [];
+
+function loadSender() {
+  try {
+    const stored = localStorage.getItem(SENDER_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function saveSender(sender) {
+  currentSender = sender;
+  localStorage.setItem(SENDER_KEY, JSON.stringify(sender));
+  renderSenderIndicator();
+}
+
+function renderSenderIndicator() {
+  if (!currentSender) {
+    senderIndicatorEl.innerHTML = '';
+    return;
+  }
+  senderIndicatorEl.innerHTML = 'Recording as: <strong>' + escapeHtml(currentSender.name) + '</strong> <button id="changeUserBtn" type="button">Change</button>';
+  document.getElementById('changeUserBtn').addEventListener('click', () => openPicker(true));
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function fetchRoster() {
+  const response = await fetch(TEAM_ROSTER_URL, {
+    headers: { 'X-Secret-Token': SECRET_TOKEN }
+  });
+  if (!response.ok) {
+    throw new Error('Roster request failed with status ' + response.status);
+  }
+  return response.json();
+}
+
+function populateUserSelect(list) {
+  userSelect.innerHTML = '<option value="">Select your name...</option>' +
+    list.map((p, i) => '<option value="' + i + '">' + escapeHtml(p.name) + '</option>').join('');
+  userSelect.disabled = false;
+  userPickerConfirm.disabled = true;
+}
+
+async function openPicker(isChange) {
+  userPickerOverlay.classList.add('visible');
+  userPickerError.style.display = 'none';
+  userPickerRetry.style.display = 'none';
+  userSelect.disabled = true;
+  userPickerConfirm.disabled = true;
+  userSelect.innerHTML = '<option value="">Loading team list...</option>';
+
+  try {
+    roster = await fetchRoster();
+    populateUserSelect(roster);
+    if (isChange && currentSender) {
+      const idx = roster.findIndex((p) => p.email === currentSender.email);
+      if (idx >= 0) {
+        userSelect.value = String(idx);
+        userPickerConfirm.disabled = false;
+      }
+    }
+  } catch (err) {
+    userSelect.innerHTML = '<option value="">Unavailable</option>';
+    userPickerError.style.display = 'block';
+    userPickerRetry.style.display = 'inline-block';
+  }
+}
+
+function closePicker() {
+  userPickerOverlay.classList.remove('visible');
+}
+
+async function initSender() {
+  const stored = loadSender();
+  try {
+    roster = await fetchRoster();
+  } catch (err) {
+    if (stored) {
+      // Offline or roster temporarily unreachable, but we already have a saved identity - proceed with it.
+      currentSender = stored;
+      renderSenderIndicator();
+      return;
+    }
+    openPicker(false);
+    return;
+  }
+
+  if (stored && roster.some((p) => p.email === stored.email)) {
+    currentSender = stored;
+    renderSenderIndicator();
+  } else {
+    populateUserSelect(roster);
+    userPickerOverlay.classList.add('visible');
+  }
+}
+
+userSelect.addEventListener('change', () => {
+  userPickerConfirm.disabled = userSelect.value === '';
+});
+
+userPickerConfirm.addEventListener('click', () => {
+  const idx = userSelect.value;
+  if (idx === '') return;
+  const picked = roster[Number(idx)];
+  saveSender(picked);
+  closePicker();
+});
+
+userPickerRetry.addEventListener('click', () => openPicker(!!currentSender));
 
 const recordBtn = document.getElementById('recordBtn');
 const secondaryControls = document.getElementById('secondaryControls');
@@ -299,6 +544,10 @@ function updateControlsForState() {
 
 async function startRecording() {
   if (recordingState !== 'idle') return;
+  if (!currentSender) {
+    openPicker(false);
+    return;
+  }
   if (!navigator.onLine) {
     setStatus('You are offline', 'offline');
     return;
@@ -401,6 +650,10 @@ async function sendRecording(blob) {
 
   const formData = new FormData();
   formData.append('audio', blob, filename);
+  if (currentSender) {
+    formData.append('sender_name', currentSender.name);
+    formData.append('sender_email', currentSender.email);
+  }
 
   try {
     const response = await fetch(N8N_WEBHOOK_URL, {
@@ -462,6 +715,7 @@ if ('serviceWorker' in navigator) {
 
 checkSupport();
 loadLastSubmit();
+initSender();
 if (!navigator.onLine) {
   setStatus('You are offline', 'offline');
 }
