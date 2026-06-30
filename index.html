@@ -177,6 +177,54 @@
     margin-top: 24px;
   }
 
+  #orDivider {
+    color: var(--muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 28px 0 16px;
+  }
+
+  #textInputSection {
+    width: min(90vw, 360px);
+  }
+
+  #taskTextInput {
+    width: 100%;
+    min-height: 84px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    resize: vertical;
+  }
+
+  #taskTextInput:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  #sendTextBtn {
+    margin-top: 12px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  #sendTextBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
   #senderIndicator {
     font-size: 13px;
     color: var(--muted);
@@ -306,6 +354,13 @@
   <div id="secondaryControls">
     <button id="pauseBtn" type="button">⏸ Pause</button>
     <button id="deleteBtn" type="button">🗑 Restart</button>
+  </div>
+
+  <div id="orDivider">or type a task instead</div>
+
+  <div id="textInputSection">
+    <textarea id="taskTextInput" placeholder="e.g. Tell Sarah to order more plates by Tuesday"></textarea>
+    <button id="sendTextBtn" type="button" disabled>Send</button>
   </div>
 
   <div id="status" class="ready">Ready</div>
@@ -457,6 +512,8 @@ const statusEl = document.getElementById('status');
 const retryBtn = document.getElementById('retryBtn');
 const lastSubmitEl = document.getElementById('lastSubmit');
 const unsupportedEl = document.getElementById('unsupported');
+const taskTextInput = document.getElementById('taskTextInput');
+const sendTextBtn = document.getElementById('sendTextBtn');
 
 let mediaRecorder = null;
 let audioChunks = [];
@@ -467,6 +524,7 @@ let pendingDiscard = false;
 
 // recordingState: 'idle' | 'recording' | 'paused'
 let recordingState = 'idle';
+let recordingSupported = true;
 
 const LAST_SUBMIT_KEY = 'taskvoice_last_submit';
 
@@ -496,6 +554,7 @@ function checkSupport() {
   const hasMediaRecorder = !!window.MediaRecorder;
 
   if (!hasMediaDevices || !hasMediaRecorder) {
+    recordingSupported = false;
     recordBtn.classList.add('disabled');
     recordBtn.disabled = true;
     setStatus('Error', 'error');
@@ -539,6 +598,22 @@ function updateControlsForState() {
     secondaryControls.classList.add('visible');
     pauseBtn.textContent = '▶ Resume';
     setStatus('Paused', 'paused');
+  }
+
+  updateInputModeAvailability();
+}
+
+// Only one input method (voice or typed text) can be used at a time:
+// recording in progress greys out the text box, and typed text greys out the record button.
+function updateInputModeAvailability() {
+  const isRecording = recordingState !== 'idle';
+  taskTextInput.disabled = isRecording;
+  sendTextBtn.disabled = isRecording || taskTextInput.value.trim() === '';
+
+  const hasTypedText = taskTextInput.value.trim() !== '';
+  if (!isRecording && recordingSupported) {
+    recordBtn.classList.toggle('disabled', hasTypedText);
+    recordBtn.disabled = hasTypedText;
   }
 }
 
@@ -676,11 +751,59 @@ async function sendRecording(blob) {
   }
 }
 
+async function sendTypedTask() {
+  const text = taskTextInput.value.trim();
+  if (!text) return;
+  if (!currentSender) {
+    openPicker(false);
+    return;
+  }
+  if (!navigator.onLine) {
+    setStatus('You are offline', 'offline');
+    return;
+  }
+
+  setStatus('Sending', 'sending');
+  retryBtn.classList.remove('visible');
+  sendTextBtn.disabled = true;
+  taskTextInput.disabled = true;
+
+  const formData = new FormData();
+  formData.append('task_text', text);
+  formData.append('sender_name', currentSender.name);
+  formData.append('sender_email', currentSender.email);
+
+  try {
+    const response = await fetch(N8N_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'X-Secret-Token': SECRET_TOKEN
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error('Webhook responded with status ' + response.status);
+    }
+
+    setStatus('Done', 'done');
+    saveLastSubmit();
+    taskTextInput.value = '';
+  } catch (err) {
+    setStatus('Error', 'error');
+  } finally {
+    updateInputModeAvailability();
+  }
+}
+
 retryBtn.addEventListener('click', () => {
   if (lastBlob) {
     sendRecording(lastBlob);
   }
 });
+
+taskTextInput.addEventListener('input', updateInputModeAvailability);
+sendTextBtn.addEventListener('click', sendTypedTask);
 
 // Tap to toggle: first tap starts recording, second tap stops and sends.
 recordBtn.addEventListener('click', () => {
@@ -716,6 +839,7 @@ if ('serviceWorker' in navigator) {
 checkSupport();
 loadLastSubmit();
 initSender();
+updateInputModeAvailability();
 if (!navigator.onLine) {
   setStatus('You are offline', 'offline');
 }
