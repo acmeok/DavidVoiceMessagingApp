@@ -848,6 +848,10 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist();
+}
+
 checkSupport();
 loadLastSubmit();
 initSender();

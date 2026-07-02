@@ -2,7 +2,7 @@
 // Provides basic offline support for the app shell.
 // The webhook POST request itself always goes to the network and is never cached.
 
-const CACHE_NAME = 'task-voice-cache-v5';
+const CACHE_NAME = 'task-voice-cache-v6';
 const APP_SHELL = [
   './',
   './index.html',
