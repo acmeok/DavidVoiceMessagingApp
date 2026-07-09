@@ -41,7 +41,7 @@
     justify-content: center;
     min-height: 100vh;
     min-height: 100dvh;
-    padding: 24px 24px 80px;
+    padding: 24px;
     text-align: center;
   }
 
@@ -159,7 +159,7 @@
 
   #lastSubmit {
     position: fixed;
-    bottom: 56px;
+    bottom: 16px;
     left: 0;
     right: 0;
     text-align: center;
@@ -235,129 +235,131 @@
     cursor: not-allowed;
   }
 
-  /* LOGIN SCREEN */
-  #loginScreen {
+  #senderIndicator {
+    font-size: 13px;
+    color: var(--muted);
+    margin: -28px 0 32px;
+    min-height: 18px;
+  }
+
+  #senderIndicator strong {
+    color: var(--text);
+  }
+
+  #changeUserBtn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 13px;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 4px;
+  }
+
+  #userPickerOverlay {
+    display: none;
     position: fixed;
     inset: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
+    background: rgba(0,0,0,0.7);
     align-items: center;
     justify-content: center;
-    padding: 32px 24px;
-    text-align: center;
+    padding: 24px;
     z-index: 100;
   }
 
-  #loginScreen h1 {
-    margin-bottom: 12px;
-  }
-
-  #loginScreen p {
-    color: var(--muted);
-    font-size: 15px;
-    margin: 0 0 44px;
-    line-height: 1.6;
-  }
-
-  #googleSignInBtn {
+  #userPickerOverlay.visible {
     display: flex;
-    align-items: center;
-    gap: 12px;
-    background: #fff;
-    color: #3c4043;
-    border: none;
-    border-radius: 4px;
-    padding: 0 20px;
-    height: 48px;
+  }
+
+  #userPickerCard {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 28px 24px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+  }
+
+  #userPickerCard h2 {
+    font-size: 16px;
+    margin: 0 0 8px;
+  }
+
+  #userPickerCard p {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 20px;
+  }
+
+  #userSelect {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: var(--bg);
+    color: var(--text);
     font-size: 15px;
-    font-weight: 500;
-    font-family: inherit;
+    margin-bottom: 16px;
+  }
+
+  #userPickerConfirm {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-    transition: box-shadow 0.15s ease;
   }
 
-  #googleSignInBtn:active {
-    opacity: 0.85;
+  #userPickerConfirm:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
-  #loginError {
-    margin-top: 20px;
+  #userPickerError {
     color: var(--error);
     font-size: 13px;
-    min-height: 20px;
-    max-width: 280px;
-    line-height: 1.5;
-  }
-
-  /* USER BAR */
-  #userBar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    margin-top: 12px;
     display: none;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 16px;
-    background: var(--surface);
-    border-top: 1px solid rgba(255,255,255,0.06);
   }
 
-  #userNameDisplay {
+  #userPickerRetry {
+    margin-top: 10px;
+    background: none;
+    border: 1px solid var(--error);
+    color: var(--error);
+    padding: 8px 16px;
+    border-radius: 8px;
     font-size: 13px;
-    color: var(--muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 220px;
-  }
-
-  #signOutBtn {
-    flex-shrink: 0;
-    background: transparent;
-    color: var(--muted);
-    border: 1px solid rgba(255,255,255,0.12);
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-family: inherit;
     cursor: pointer;
-  }
-
-  #signOutBtn:active {
-    opacity: 0.7;
+    display: none;
   }
 </style>
 </head>
 <body>
 
-  <!-- Login screen — shown by default, hidden once authenticated -->
-  <div id="loginScreen">
-    <h1>Task Voice</h1>
-    <p>Sign in with your Acme Construction<br>company account to continue.</p>
-    <button id="googleSignInBtn" type="button">
-      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.017 17.64 11.71 17.64 9.2z" fill="#4285F4"/>
-        <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
-        <path d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z" fill="#FBBC05"/>
-        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
-      </svg>
-      Sign in with Google
-    </button>
-    <div id="loginError"></div>
-  </div>
-
-  <!-- User bar — shown when authenticated -->
-  <div id="userBar">
-    <span id="userNameDisplay"></span>
-    <button id="signOutBtn" type="button">Sign Out</button>
-  </div>
-
   <a id="dashboardLink" href="https://acmeok-construction-dashboard.vercel.app/" target="_blank" rel="noopener">Dashboard &rarr;</a>
 
   <h1>Task Voice</h1>
+
+  <div id="senderIndicator"></div>
+
+  <div id="userPickerOverlay">
+    <div id="userPickerCard">
+      <h2>Who are you?</h2>
+      <p>Pick your name so tasks can show who sent them. You won't be asked again on this device.</p>
+      <select id="userSelect" disabled>
+        <option value="">Loading team list...</option>
+      </select>
+      <button id="userPickerConfirm" type="button" disabled>Continue</button>
+      <div id="userPickerError">Couldn't load the team list. Check your connection and try again.</div>
+      <button id="userPickerRetry" type="button">Retry</button>
+    </div>
+  </div>
 
   <button id="recordBtn" type="button">Tap to Record</button>
 
@@ -380,99 +382,163 @@
 
   <div id="lastSubmit"></div>
 
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-
+<script>
 // =========================================================
-// CONFIGURATION
+// CONFIGURATION - EDIT THESE TWO VALUES BEFORE DEPLOYING
 // =========================================================
-const N8N_WEBHOOK_URL = "https://acmeconstruction.app.n8n.cloud/webhook/80acff81-4ad5-478b-8323-095bc9029d86";
-const SECRET_TOKEN = "DavidVoiceMessageApp";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBRB8OhCL80e0o0hglwtoQdYwPsGSaoCLc",
-  authDomain: "acmeok-dashboard.firebaseapp.com",
-  projectId: "acmeok-dashboard",
-  storageBucket: "acmeok-dashboard.firebasestorage.app",
-  messagingSenderId: "557242620616",
-  appId: "1:557242620616:web:7afbc35e9c83fdce3123fd"
-};
+const N8N_WEBHOOK_URL = "https://acmeconstruction.app.n8n.cloud/webhook/80acff81-4ad5-478b-8323-095bc9029d86"; // Replace this with your actual value
+const SECRET_TOKEN = "DavidVoiceMessageApp"; // Replace this with your actual value
+const TEAM_ROSTER_URL = "https://acmeconstruction.app.n8n.cloud/webhook/team-roster"; // Replace this with your actual value
 // =========================================================
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
-provider.setCustomParameters({ hd: 'acmeok.com' });
+const senderIndicatorEl = document.getElementById('senderIndicator');
+const userPickerOverlay = document.getElementById('userPickerOverlay');
+const userSelect = document.getElementById('userSelect');
+const userPickerConfirm = document.getElementById('userPickerConfirm');
+const userPickerError = document.getElementById('userPickerError');
+const userPickerRetry = document.getElementById('userPickerRetry');
 
-// DOM refs
-const loginScreen     = document.getElementById('loginScreen');
-const googleSignInBtn = document.getElementById('googleSignInBtn');
-const loginError      = document.getElementById('loginError');
-const userBar         = document.getElementById('userBar');
-const userNameDisplay = document.getElementById('userNameDisplay');
-const signOutBtn      = document.getElementById('signOutBtn');
-const recordBtn       = document.getElementById('recordBtn');
+const SENDER_KEY = 'taskvoice_sender';
+let currentSender = null; // { name, email }
+let roster = [];
+
+function loadSender() {
+  try {
+    const stored = localStorage.getItem(SENDER_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function saveSender(sender) {
+  currentSender = sender;
+  localStorage.setItem(SENDER_KEY, JSON.stringify(sender));
+  renderSenderIndicator();
+}
+
+function renderSenderIndicator() {
+  if (!currentSender) {
+    senderIndicatorEl.innerHTML = '';
+    return;
+  }
+  senderIndicatorEl.innerHTML = 'Recording as: <strong>' + escapeHtml(currentSender.name) + '</strong> <button id="changeUserBtn" type="button">Change</button>';
+  document.getElementById('changeUserBtn').addEventListener('click', () => openPicker(true));
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function fetchRoster() {
+  const response = await fetch(TEAM_ROSTER_URL, {
+    headers: { 'X-Secret-Token': SECRET_TOKEN }
+  });
+  if (!response.ok) {
+    throw new Error('Roster request failed with status ' + response.status);
+  }
+  return response.json();
+}
+
+function populateUserSelect(list) {
+  userSelect.innerHTML = '<option value="">Select your name...</option>' +
+    list.map((p, i) => '<option value="' + i + '">' + escapeHtml(p.name) + '</option>').join('');
+  userSelect.disabled = false;
+  userPickerConfirm.disabled = true;
+}
+
+async function openPicker(isChange) {
+  userPickerOverlay.classList.add('visible');
+  userPickerError.style.display = 'none';
+  userPickerRetry.style.display = 'none';
+  userSelect.disabled = true;
+  userPickerConfirm.disabled = true;
+  userSelect.innerHTML = '<option value="">Loading team list...</option>';
+
+  try {
+    roster = await fetchRoster();
+    populateUserSelect(roster);
+    if (isChange && currentSender) {
+      const idx = roster.findIndex((p) => p.email === currentSender.email);
+      if (idx >= 0) {
+        userSelect.value = String(idx);
+        userPickerConfirm.disabled = false;
+      }
+    }
+  } catch (err) {
+    userSelect.innerHTML = '<option value="">Unavailable</option>';
+    userPickerError.style.display = 'block';
+    userPickerRetry.style.display = 'inline-block';
+  }
+}
+
+function closePicker() {
+  userPickerOverlay.classList.remove('visible');
+}
+
+async function initSender() {
+  const stored = loadSender();
+  try {
+    roster = await fetchRoster();
+  } catch (err) {
+    if (stored) {
+      // Offline or roster temporarily unreachable, but we already have a saved identity - proceed with it.
+      currentSender = stored;
+      renderSenderIndicator();
+      return;
+    }
+    openPicker(false);
+    return;
+  }
+
+  if (stored && roster.some((p) => p.email === stored.email)) {
+    currentSender = stored;
+    renderSenderIndicator();
+  } else {
+    populateUserSelect(roster);
+    userPickerOverlay.classList.add('visible');
+  }
+}
+
+userSelect.addEventListener('change', () => {
+  userPickerConfirm.disabled = userSelect.value === '';
+});
+
+userPickerConfirm.addEventListener('click', () => {
+  const idx = userSelect.value;
+  if (idx === '') return;
+  const picked = roster[Number(idx)];
+  saveSender(picked);
+  closePicker();
+});
+
+userPickerRetry.addEventListener('click', () => openPicker(!!currentSender));
+
+const recordBtn = document.getElementById('recordBtn');
 const secondaryControls = document.getElementById('secondaryControls');
-const pauseBtn        = document.getElementById('pauseBtn');
-const deleteBtn       = document.getElementById('deleteBtn');
-const statusEl        = document.getElementById('status');
-const retryBtn        = document.getElementById('retryBtn');
-const lastSubmitEl    = document.getElementById('lastSubmit');
-const unsupportedEl   = document.getElementById('unsupported');
-const taskTextInput   = document.getElementById('taskTextInput');
-const sendTextBtn     = document.getElementById('sendTextBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const deleteBtn = document.getElementById('deleteBtn');
+const statusEl = document.getElementById('status');
+const retryBtn = document.getElementById('retryBtn');
+const lastSubmitEl = document.getElementById('lastSubmit');
+const unsupportedEl = document.getElementById('unsupported');
+const taskTextInput = document.getElementById('taskTextInput');
+const sendTextBtn = document.getElementById('sendTextBtn');
 
-let currentSender = null; // { name, email } — populated from Firebase
 let mediaRecorder = null;
 let audioChunks = [];
 let mimeType = '';
 let lastBlob = null;
 let stream = null;
 let pendingDiscard = false;
+
+// recordingState: 'idle' | 'recording' | 'paused'
 let recordingState = 'idle';
 let recordingSupported = true;
 
 const LAST_SUBMIT_KEY = 'taskvoice_last_submit';
-
-// ---- AUTH ----
-
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    if (!user.email.endsWith('@acmeok.com')) {
-      signOut(auth);
-      loginError.textContent = 'Only @acmeok.com company accounts are allowed.';
-      return;
-    }
-    currentSender = { name: user.displayName || user.email, email: user.email };
-    loginScreen.style.display = 'none';
-    userBar.style.display = 'flex';
-    userNameDisplay.textContent = user.displayName || user.email;
-    checkSupport();
-    loadLastSubmit();
-    updateInputModeAvailability();
-    if (!navigator.onLine) setStatus('You are offline', 'offline');
-  } else {
-    currentSender = null;
-    loginScreen.style.display = 'flex';
-    userBar.style.display = 'none';
-  }
-});
-
-getRedirectResult(auth).catch((err) => {
-  if (err.code && err.code !== 'auth/no-auth-event') {
-    loginError.textContent = 'Sign-in failed. Please try again.';
-  }
-});
-
-googleSignInBtn.addEventListener('click', () => {
-  loginError.textContent = '';
-  signInWithRedirect(auth, provider);
-});
-
-signOutBtn.addEventListener('click', () => signOut(auth));
-
-// ---- RECORDING ----
 
 function setStatus(text, cls) {
   statusEl.textContent = text;
@@ -549,6 +615,8 @@ function updateControlsForState() {
   updateInputModeAvailability();
 }
 
+// Only one input method (voice or typed text) can be used at a time:
+// recording in progress greys out the text box, and typed text greys out the record button.
 function updateInputModeAvailability() {
   const isRecording = recordingState !== 'idle';
   taskTextInput.disabled = isRecording;
@@ -563,6 +631,10 @@ function updateInputModeAvailability() {
 
 async function startRecording() {
   if (recordingState !== 'idle') return;
+  if (!currentSender) {
+    openPicker(false);
+    return;
+  }
   if (!navigator.onLine) {
     setStatus('You are offline', 'offline');
     return;
@@ -694,6 +766,10 @@ async function sendRecording(blob) {
 async function sendTypedTask() {
   const text = taskTextInput.value.trim();
   if (!text) return;
+  if (!currentSender) {
+    openPicker(false);
+    return;
+  }
   if (!navigator.onLine) {
     setStatus('You are offline', 'offline');
     return;
@@ -741,6 +817,7 @@ retryBtn.addEventListener('click', () => {
 taskTextInput.addEventListener('input', updateInputModeAvailability);
 sendTextBtn.addEventListener('click', sendTypedTask);
 
+// Tap to toggle: first tap starts recording, second tap stops and sends.
 recordBtn.addEventListener('click', () => {
   if (recordBtn.disabled) return;
   if (recordingState === 'idle') {
@@ -773,6 +850,14 @@ if ('serviceWorker' in navigator) {
 
 if (navigator.storage && navigator.storage.persist) {
   navigator.storage.persist();
+}
+
+checkSupport();
+loadLastSubmit();
+initSender();
+updateInputModeAvailability();
+if (!navigator.onLine) {
+  setStatus('You are offline', 'offline');
 }
 </script>
 </body>
