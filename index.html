@@ -334,7 +334,7 @@
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 
 // =========================================================
 const N8N_WEBHOOK_URL = "https://acmeconstruction.app.n8n.cloud/webhook/80acff81-4ad5-478b-8323-095bc9029d86";
@@ -409,8 +409,7 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// Handle any error from a previous redirect attempt.
-// Errors here are non-critical on normal page loads — suppress silently.
+// Pick up any result from a previous redirect fallback.
 getRedirectResult(auth).catch((err) => {
   const silent = ['auth/no-auth-event', 'auth/redirect-cancelled-by-user'];
   if (!silent.includes(err.code)) {
@@ -418,9 +417,18 @@ getRedirectResult(auth).catch((err) => {
   }
 });
 
-googleSignInBtn.addEventListener('click', () => {
+// Synchronous click handler — no async/await so the user gesture chain
+// is preserved, allowing the popup to open on iOS and Android.
+googleSignInBtn.addEventListener('click', function() {
   loginError.textContent = '';
-  signInWithRedirect(auth, provider);
+  signInWithPopup(auth, provider).catch(function(err) {
+    if (err.code === 'auth/popup-blocked') {
+      // Popup was blocked by the browser — fall back to redirect.
+      signInWithRedirect(auth, provider);
+    } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+      loginError.textContent = 'Sign-in failed (' + err.code + '). Please try again.';
+    }
+  });
 });
 
 signOutBtn.addEventListener('click', () => signOut(auth));
