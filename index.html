@@ -382,7 +382,7 @@
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 
 // =========================================================
 // CONFIGURATION
@@ -459,15 +459,15 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-googleSignInBtn.addEventListener('click', async () => {
-  loginError.textContent = '';
-  try {
-    await signInWithPopup(auth, provider);
-  } catch (err) {
-    if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-      loginError.textContent = 'Sign-in failed. Please try again.';
-    }
+getRedirectResult(auth).catch((err) => {
+  if (err.code && err.code !== 'auth/no-auth-event') {
+    loginError.textContent = 'Sign-in failed. Please try again.';
   }
+});
+
+googleSignInBtn.addEventListener('click', () => {
+  loginError.textContent = '';
+  signInWithRedirect(auth, provider);
 });
 
 signOutBtn.addEventListener('click', () => signOut(auth));
