@@ -222,23 +222,11 @@
     line-height: 1.6;
   }
 
-  #googleSignInBtn {
+  #googleBtnContainer {
     display: flex;
-    align-items: center;
-    gap: 12px;
-    background: #fff;
-    color: #3c4043;
-    border: none;
-    border-radius: 4px;
-    padding: 0 20px;
-    height: 48px;
-    font-size: 15px;
-    font-weight: 500;
-    font-family: inherit;
-    cursor: pointer;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    justify-content: center;
+    min-height: 44px;
   }
-  #googleSignInBtn:active { opacity: 0.85; }
 
   #loginError {
     margin-top: 20px;
@@ -290,15 +278,7 @@
   <div id="loginScreen">
     <h1>Task Voice</h1>
     <p>Sign in with your Acme Construction<br>company account to continue.</p>
-    <button id="googleSignInBtn" type="button">
-      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.017 17.64 11.71 17.64 9.2z" fill="#4285F4"/>
-        <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
-        <path d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z" fill="#FBBC05"/>
-        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
-      </svg>
-      Sign in with Google
-    </button>
+    <div id="googleBtnContainer"></div>
     <div id="loginError"></div>
   </div>
 
@@ -334,7 +314,7 @@
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithCredential, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 
 // =========================================================
 const N8N_WEBHOOK_URL = "https://acmeconstruction.app.n8n.cloud/webhook/80acff81-4ad5-478b-8323-095bc9029d86";
@@ -349,13 +329,12 @@ const firebaseConfig = {
 };
 // =========================================================
 
+const GIS_CLIENT_ID = '557242620616-bl2r4clf6b3dj1jf9ai5utork7ddprvd.apps.googleusercontent.com';
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
-provider.setCustomParameters({ hd: 'acmeok.com' });
 
 const loginScreen     = document.getElementById('loginScreen');
-const googleSignInBtn = document.getElementById('googleSignInBtn');
 const loginError      = document.getElementById('loginError');
 const userBar         = document.getElementById('userBar');
 const userNameDisplay = document.getElementById('userNameDisplay');
@@ -409,27 +388,32 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// Pick up any result from a previous redirect fallback.
-getRedirectResult(auth).catch((err) => {
-  const silent = ['auth/no-auth-event', 'auth/redirect-cancelled-by-user'];
-  if (!silent.includes(err.code)) {
-    loginError.textContent = 'Sign-in failed (' + err.code + '). Please try again.';
-  }
-});
-
-// Synchronous click handler — no async/await so the user gesture chain
-// is preserved, allowing the popup to open on iOS and Android.
-googleSignInBtn.addEventListener('click', function() {
-  loginError.textContent = '';
-  signInWithPopup(auth, provider).catch(function(err) {
-    if (err.code === 'auth/popup-blocked') {
-      // Popup was blocked by the browser — fall back to redirect.
-      signInWithRedirect(auth, provider);
-    } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-      loginError.textContent = 'Sign-in failed (' + err.code + '). Please try again.';
-    }
-  });
-});
+// Load Google Identity Services and render the sign-in button.
+// GIS shows a native account chooser that works on mobile and desktop
+// without popups or redirects to an external auth handler page.
+(function loadGis() {
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.onload = function() {
+    google.accounts.id.initialize({
+      client_id: GIS_CLIENT_ID,
+      callback: function(response) {
+        loginError.textContent = '';
+        const credential = GoogleAuthProvider.credential(response.credential);
+        signInWithCredential(auth, credential).catch(function(err) {
+          loginError.textContent = 'Sign-in failed (' + err.code + '). Please try again.';
+        });
+      },
+      hd: 'acmeok.com',
+      auto_select: false
+    });
+    google.accounts.id.renderButton(
+      document.getElementById('googleBtnContainer'),
+      { theme: 'outline', size: 'large', text: 'signin_with', width: 280 }
+    );
+  };
+  document.head.appendChild(s);
+})();
 
 signOutBtn.addEventListener('click', () => signOut(auth));
 
