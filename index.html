@@ -199,12 +199,34 @@
   }
   #sendTextBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  /* LOADING SCREEN */
+  #loadingScreen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+  }
+
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   /* LOGIN SCREEN */
   #loginScreen {
     position: fixed;
     inset: 0;
     background: var(--bg);
-    display: flex;
+    display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -274,6 +296,9 @@
 </head>
 <body>
 
+  <!-- Loading screen -->
+  <div id="loadingScreen"><div class="spinner"></div></div>
+
   <!-- Login screen -->
   <div id="loginScreen">
     <h1>Task Voice</h1>
@@ -334,6 +359,7 @@ const GIS_CLIENT_ID = '557242620616-bl2r4clf6b3dj1jf9ai5utork7ddprvd.apps.google
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
+const loadingScreen   = document.getElementById('loadingScreen');
 const loginScreen     = document.getElementById('loginScreen');
 const loginError      = document.getElementById('loginError');
 const userBar         = document.getElementById('userBar');
@@ -367,9 +393,11 @@ const LAST_SUBMIT_KEY = 'taskvoice_last_submit';
 // onAuthStateChanged is the single source of truth.
 // It fires automatically after signInWithRedirect completes.
 onAuthStateChanged(auth, (user) => {
+  loadingScreen.style.display = 'none';
   if (user) {
     if (!user.email.endsWith('@acmeok.com')) {
       signOut(auth);
+      loginScreen.style.display = 'flex';
       loginError.textContent = 'Only @acmeok.com company accounts are allowed.';
       return;
     }
@@ -411,7 +439,6 @@ onAuthStateChanged(auth, (user) => {
       document.getElementById('googleBtnContainer'),
       { theme: 'outline', size: 'large', text: 'signin_with', width: 280 }
     );
-    google.accounts.id.prompt();
   };
   document.head.appendChild(s);
 })();
